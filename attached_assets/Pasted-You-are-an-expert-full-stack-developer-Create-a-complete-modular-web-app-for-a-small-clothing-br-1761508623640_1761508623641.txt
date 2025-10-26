@@ -1,0 +1,69 @@
+You are an expert full-stack developer.
+
+Create a complete modular web app for a small clothing brand. The system should be responsive, fast, and scalable enough for 40–200 daily customers.
+
+Tech Stack:
+- Next.js (Frontend + SSR)
+- Tailwind CSS (Responsive UI)
+- Node.js + Express (Backend)
+- MongoDB (Database via Mongoose)
+- Zustand or Context API (for local state)
+- TypeScript preferred if possible
+
+Project Structure:
+- /frontend (Next.js app)
+  - pages/
+    - index.tsx (Landing page with attractive product banners, call-to-action buttons)
+    - products/[id].tsx (Product detail page)
+    - login.tsx, register.tsx, dashboard.tsx
+  - components/
+    - ProductCard.tsx
+    - Navbar.tsx, Footer.tsx, HeroSection.tsx
+    - AdminAddProductForm.tsx (Admin-only form to add products dynamically)
+  - hooks/, store/, lib/
+  - styles/globals.css (Tailwind base)
+- /backend
+  - server.ts (Express + CORS + Helmet setup)
+  - routes/
+    - authRoutes.ts (register/login, OTP placeholder)
+    - productRoutes.ts (CRUD for products)
+    - orderRoutes.ts (order submission + payment placeholder)
+  - models/
+    - Product.ts (name, description, images, price, size options)
+    - User.ts (name, phone, email, password)
+    - Order.ts (productId, userId, paymentStatus)
+  - config/
+    - db.ts (MongoDB connection)
+  - .env.example (contains placeholders for MONGO_URI, PAYMENT_KEY, JWT_SECRET, OTP_KEY)
+
+Core Features:
+✅ 1. Product Listing & Detail Pages
+✅ 2. Add / Edit Products (Admin panel)
+✅ 3. Register & Login (with OTP placeholder)
+✅ 4. Checkout Flow (with Payment integration placeholder)
+✅ 5. Responsive design for mobile and desktop
+✅ 6. Dynamic product loading from backend
+✅ 7. Minimal, premium UI with smooth animations
+
+Design Requirements:
+- Keep it minimal, clean, and premium (black/dark-gray + accent orange)
+- Use Tailwind breakpoints for responsiveness (sm, md, lg, xl)
+- Navbar: logo, shop, about, contact, login button
+- Hero section: featured hoodie or tee with “Shop Now”
+- Product grid: responsive 2–4 columns depending on screen size
+- Product detail page: large image + “Add to Cart” + “Buy Now” button
+- Admin page: simple protected dashboard with add/edit/delete product
+
+Integration Placeholders:
+- Payment Gateway → Leave placeholder for Stripe/Razorpay API keys.
+- OTP Verification → Leave function stub for future integration.
+- Hosting → Should be deployable easily on Replit, Render, or Vercel.
+- Env → .env.example file with clear placeholder comments.
+
+Performance Notes:
+- Optimize images using Next/Image.
+- Use incremental static regeneration for products.
+- Implement lazy loading where possible.
+
+Goal:
+Build a visually appealing, small, and scalable ecommerce foundation. Focus on modular architecture, responsiveness, and clear integration placeholders.
