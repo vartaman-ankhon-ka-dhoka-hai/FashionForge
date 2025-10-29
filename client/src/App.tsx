@@ -16,6 +16,7 @@ import Checkout from "@/pages/Checkout";
 import Admin from "@/pages/Admin";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
+import Wishlist from "@/pages/Wishlist";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
           <Route path="/products/:id" component={ProductDetail} />
           <Route path="/login" component={Login} />
           <Route path="/cart" component={Cart} />
+          <Route path="/wishlist" component={Wishlist} />
           <Route path="/checkout" component={Checkout} />
           <Route path="/admin" component={Admin} />
           <Route path="/about" component={About} />

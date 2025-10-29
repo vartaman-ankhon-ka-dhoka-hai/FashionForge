@@ -1,17 +1,20 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Menu, X, User } from "lucide-react";
+import { ShoppingCart, Menu, X, User, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useCartStore } from "@/lib/cart-store";
+import { useWishlistStore } from "@/lib/wishlist-store";
 import logoImage from "@assets/generated_images/Clothing_brand_logo_icon_02f84793.png";
 
 export function Navbar() {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { items } = useCartStore();
+  const { items: wishlistItems } = useWishlistStore();
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const wishlistCount = wishlistItems.length;
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -50,6 +53,20 @@ export function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="relative" asChild data-testid="button-wishlist">
+              <Link href="/wishlist">
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full px-1 text-xs"
+                  >
+                    {wishlistCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+
             <Button variant="ghost" size="icon" className="relative" asChild data-testid="button-cart">
               <Link href="/cart">
                 <ShoppingCart className="h-5 w-5" />

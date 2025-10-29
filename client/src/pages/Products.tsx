@@ -1,20 +1,44 @@
 import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { useState, useMemo } from "react";
+import { Search } from "lucide-react";
 import type { Product } from "@shared/schema";
 
 export default function Products() {
   const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "price-low" | "price-high">("default");
   
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
-  const filteredProducts = products?.filter((product) => {
-    if (filter === "all") return true;
-    return product.category === filter;
-  }) || [];
+  const filteredProducts = useMemo(() => {
+    let result = products || [];
+    
+    if (filter !== "all") {
+      result = result.filter((product) => product.category === filter);
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (product) =>
+          product.name.toLowerCase().includes(query) ||
+          product.description.toLowerCase().includes(query)
+      );
+    }
+    
+    if (sortBy === "price-low") {
+      result = [...result].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    } else if (sortBy === "price-high") {
+      result = [...result].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+    }
+    
+    return result;
+  }, [products, filter, searchQuery, sortBy]);
 
   const categories = [
     { value: "all", label: "All Products" },
@@ -33,18 +57,54 @@ export default function Products() {
           </p>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap gap-2 mb-8" data-testid="filter-categories">
-          {categories.map((category) => (
-            <Button
-              key={category.value}
-              variant={filter === category.value ? "default" : "outline"}
-              onClick={() => setFilter(category.value)}
-              data-testid={`button-filter-${category.value}`}
-            >
-              {category.label}
-            </Button>
-          ))}
+        {/* Search and Filters */}
+        <div className="space-y-4 mb-8">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-2" data-testid="filter-categories">
+              {categories.map((category) => (
+                <Button
+                  key={category.value}
+                  variant={filter === category.value ? "default" : "outline"}
+                  onClick={() => setFilter(category.value)}
+                  data-testid={`button-filter-${category.value}`}
+                >
+                  {category.label}
+                </Button>
+              ))}
+            </div>
+            
+            <div className="border-l pl-3 ml-auto flex gap-2">
+              <Button
+                variant={sortBy === "price-low" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSortBy("price-low")}
+              >
+                Price: Low to High
+              </Button>
+              <Button
+                variant={sortBy === "price-high" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSortBy("price-high")}
+              >
+                Price: High to Low
+              </Button>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground">
+            {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"} found
+          </p>
         </div>
 
         {/* Products Grid */}

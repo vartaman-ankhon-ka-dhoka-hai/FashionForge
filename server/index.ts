@@ -1,8 +1,49 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
+
+app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+app.use(cors({
+  origin: process.env.NODE_ENV === "production" 
+    ? (process.env.ALLOWED_ORIGINS?.split(",").map(o => o.trim()).filter(Boolean) || [])
+    : true,
+  credentials: true,
+}));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many authentication attempts, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.originalUrl.startsWith('/api/auth'),
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { message: "Too many requests from this IP, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.originalUrl.startsWith('/api/auth'),
+});
+
+app.use("/api", authLimiter);
+app.use("/api", apiLimiter);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -12,9 +53,10 @@ declare module 'http' {
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
-  }
+  },
+  limit: "10mb",
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -49,12 +91,20 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    log(`[ERROR] ${req.method} ${req.path} - ${status} - ${message}`);
+    
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error stack:", err.stack);
+    }
+
+    res.status(status).json({ 
+      message,
+      ...(process.env.NODE_ENV === "development" && { stack: err.stack })
+    });
   });
 
   // importantly only setup vite in development and after

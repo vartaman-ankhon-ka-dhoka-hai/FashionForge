@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { body, validationResult } from "express-validator";
 import { 
   insertUserSchema, 
   loginSchema, 
@@ -10,6 +11,14 @@ import {
   insertOrderSchema,
   type User 
 } from "@shared/schema";
+
+function validateRequest(req: any, res: any, next: any) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: errors.array()[0].msg });
+  }
+  next();
+}
 
 // In development, use a default secret. In production, require it to be set.
 const JWT_SECRET = process.env.JWT_SECRET || 
@@ -48,7 +57,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== AUTH ROUTES ====================
   
   // Register new user
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", 
+    [
+      body("email").isEmail().normalizeEmail().trim().escape(),
+      body("password").isLength({ min: 6 }).trim(),
+      body("name").isLength({ min: 2, max: 100 }).trim().escape(),
+      body("phone").optional().trim().escape(),
+      validateRequest
+    ],
+    async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
       
@@ -58,8 +75,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+      // Hash password with 12 salt rounds for better security
+      const hashedPassword = await bcrypt.hash(validatedData.password, 12);
       
       // Create user
       const user = await storage.createUser({
@@ -83,7 +100,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Login user
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", 
+    [
+      body("email").isEmail().normalizeEmail().trim().escape(),
+      body("password").notEmpty().trim(),
+      validateRequest
+    ],
+    async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
       
