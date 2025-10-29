@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
@@ -65,7 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body("phone").optional().trim().escape(),
       validateRequest
     ],
-    async (req, res) => {
+    async (req: Request, res: Response) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
       
@@ -106,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body("password").notEmpty().trim(),
       validateRequest
     ],
-    async (req, res) => {
+    async (req: Request, res: Response) => {
     try {
       const validatedData = loginSchema.parse(req.body);
       
