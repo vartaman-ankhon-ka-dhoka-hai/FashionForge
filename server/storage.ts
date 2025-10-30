@@ -44,23 +44,27 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private addresses: Map<string, Address>;
   private products: Map<string, Product>;
   private orders: Map<string, Order>;
 
   constructor() {
     this.users = new Map();
+    this.addresses = new Map();
     this.products = new Map();
     this.orders = new Map();
     
-    // Seed initial admin user
+    // Seed initial admin user (phone-based)
     const adminId = randomUUID();
     this.users.set(adminId, {
       id: adminId,
-      email: "admin@urbanthread.com",
-      password: "$2a$10$rQ0YvK5YQH5YvK5YQH5YvOqK5YQH5YvK5YQH5YvK5YQH5YvK5YQH5Y", // "admin123"
+      phone: "+919999999999",
       name: "Admin User",
-      phone: null,
+      email: "admin@madeinpune.com",
       isAdmin: true,
+      otpCode: null,
+      otpExpiresAt: null,
+      otpAttempts: 0,
       createdAt: new Date(),
     });
     
@@ -68,11 +72,11 @@ export class MemStorage implements IStorage {
     const products = [
       {
         id: randomUUID(),
-        name: "Premium Black Hoodie",
-        description: "Crafted from premium cotton blend, this oversized black hoodie combines comfort with urban style. Features a relaxed fit, adjustable drawstring hood, and ribbed cuffs for a modern streetwear aesthetic.",
-        price: "89.99",
+        name: "Premium Black Kurta",
+        description: "Handcrafted from premium cotton blend, this elegant black kurta combines traditional Indian craftsmanship with modern style. Features a relaxed fit, classic collar, and intricate button details.",
+        price: "2499.00",
         image: "/attached_assets/generated_images/Black_premium_hoodie_product_194dcf64.png",
-        category: "hoodie",
+        category: "kurta",
         sizes: ["S", "M", "L", "XL", "XXL"],
         inStock: true,
         featured: true,
@@ -80,11 +84,11 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
-        name: "Essential White Tee",
-        description: "A minimalist wardrobe staple. Our premium white t-shirt is made from 100% organic cotton with a classic crew neck and relaxed fit. Perfect for layering or wearing solo.",
-        price: "39.99",
+        name: "Essential White Cotton Shirt",
+        description: "A timeless wardrobe essential. Our premium white cotton shirt is made from 100% pure Indian cotton with a classic collar and comfortable fit. Perfect for any occasion.",
+        price: "1299.00",
         image: "/attached_assets/generated_images/White_modern_t-shirt_product_97925f47.png",
-        category: "tshirt",
+        category: "shirt",
         sizes: ["XS", "S", "M", "L", "XL"],
         inStock: true,
         featured: true,
@@ -92,11 +96,11 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
-        name: "Oversized Gray Hoodie",
-        description: "Ultimate comfort meets contemporary design. This oversized hoodie in charcoal gray features dropped shoulders, a spacious kangaroo pocket, and super-soft fleece interior.",
-        price: "94.99",
+        name: "Traditional Gray Kurta",
+        description: "Ultimate comfort meets traditional design. This kurta in charcoal gray features elegant patterns, a spacious pocket, and soft handwoven fabric.",
+        price: "2799.00",
         image: "/attached_assets/generated_images/Gray_oversized_hoodie_product_cf6d6803.png",
-        category: "hoodie",
+        category: "kurta",
         sizes: ["M", "L", "XL", "XXL"],
         inStock: true,
         featured: false,
@@ -104,11 +108,11 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
-        name: "Orange Accent Tee",
-        description: "Make a statement with our vibrant orange tee. Premium fabric with a modern cut, designed to add a pop of color to your streetwear collection. Pairs perfectly with neutral bottoms.",
-        price: "44.99",
+        name: "Vibrant Orange Casual Shirt",
+        description: "Make a statement with our vibrant orange shirt. Premium fabric with a modern cut, designed to add a pop of color to your collection. Perfect for festive occasions.",
+        price: "1499.00",
         image: "/attached_assets/generated_images/Orange_accent_t-shirt_product_9ab28447.png",
-        category: "tshirt",
+        category: "shirt",
         sizes: ["S", "M", "L", "XL"],
         inStock: true,
         featured: true,
@@ -126,23 +130,138 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
+  async getUserByPhone(phone: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
+      (user) => user.phone === phone
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(phone: string): Promise<User> {
     const id = randomUUID();
     const user: User = {
-      ...insertUser,
       id,
-      phone: insertUser.phone || null,
+      phone,
+      name: null,
+      email: null,
       isAdmin: false,
+      otpCode: null,
+      otpExpiresAt: null,
+      otpAttempts: 0,
       createdAt: new Date(),
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUserProfile(id: string, profile: UpdateProfile): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = {
+      ...user,
+      ...profile,
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserOtp(phone: string, otpCode: string, expiresAt: Date): Promise<void> {
+    const user = await this.getUserByPhone(phone);
+    if (user) {
+      user.otpCode = otpCode;
+      user.otpExpiresAt = expiresAt;
+      user.otpAttempts = (user.otpAttempts || 0) + 1;
+      this.users.set(user.id, user);
+    }
+  }
+
+  async verifyAndClearOtp(phone: string, otpCode: string): Promise<User | null> {
+    const user = await this.getUserByPhone(phone);
+    if (!user) return null;
+    
+    if (user.otpCode === otpCode && user.otpExpiresAt && user.otpExpiresAt > new Date()) {
+      user.otpCode = null;
+      user.otpExpiresAt = null;
+      user.otpAttempts = 0;
+      this.users.set(user.id, user);
+      return user;
+    }
+    
+    return null;
+  }
+
+  // Address methods
+  async getUserAddresses(userId: string): Promise<Address[]> {
+    return Array.from(this.addresses.values())
+      .filter(addr => addr.userId === userId)
+      .sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
+
+  async getAddress(id: string): Promise<Address | undefined> {
+    return this.addresses.get(id);
+  }
+
+  async createAddress(userId: string, insertAddress: InsertAddress): Promise<Address> {
+    const id = randomUUID();
+    const address: Address = {
+      ...insertAddress,
+      id,
+      userId,
+      addressLine2: insertAddress.addressLine2 ?? null,
+      isDefault: insertAddress.isDefault ?? false,
+      createdAt: new Date(),
+    };
+    
+    // If this is set as default, unset other defaults for this user
+    if (address.isDefault) {
+      const userAddresses = await this.getUserAddresses(userId);
+      userAddresses.forEach(addr => {
+        if (addr.isDefault) {
+          addr.isDefault = false;
+          this.addresses.set(addr.id, addr);
+        }
+      });
+    }
+    
+    this.addresses.set(id, address);
+    return address;
+  }
+
+  async updateAddress(id: string, updates: Partial<InsertAddress>): Promise<Address | undefined> {
+    const address = this.addresses.get(id);
+    if (!address) return undefined;
+    
+    const updated = { ...address, ...updates };
+    
+    // If setting as default, unset other defaults for this user
+    if (updates.isDefault === true) {
+      const userAddresses = await this.getUserAddresses(address.userId);
+      userAddresses.forEach(addr => {
+        if (addr.id !== id && addr.isDefault) {
+          addr.isDefault = false;
+          this.addresses.set(addr.id, addr);
+        }
+      });
+    }
+    
+    this.addresses.set(id, updated);
+    return updated;
+  }
+
+  async deleteAddress(id: string): Promise<boolean> {
+    return this.addresses.delete(id);
+  }
+
+  async setDefaultAddress(userId: string, addressId: string): Promise<void> {
+    const userAddresses = await this.getUserAddresses(userId);
+    userAddresses.forEach(addr => {
+      addr.isDefault = addr.id === addressId;
+      this.addresses.set(addr.id, addr);
+    });
   }
 
   // Product methods
@@ -176,10 +295,7 @@ export class MemStorage implements IStorage {
     const product = this.products.get(id);
     if (!product) return undefined;
 
-    const updated: Product = {
-      ...product,
-      ...updates,
-    };
+    const updated = { ...product, ...updates };
     this.products.set(id, updated);
     return updated;
   }
@@ -210,6 +326,7 @@ export class MemStorage implements IStorage {
     const order: Order = {
       ...insertOrder,
       id,
+      addressId: insertOrder.addressId ?? null,
       status: "pending",
       paymentStatus: "pending",
       createdAt: new Date(),
@@ -225,10 +342,7 @@ export class MemStorage implements IStorage {
     const order = this.orders.get(id);
     if (!order) return undefined;
 
-    const updated: Order = {
-      ...order,
-      status,
-    };
+    const updated = { ...order, status };
     this.orders.set(id, updated);
     return updated;
   }

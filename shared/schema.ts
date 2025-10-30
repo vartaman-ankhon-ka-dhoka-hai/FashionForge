@@ -89,7 +89,7 @@ export const insertProductSchema = createInsertSchema(products, {
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
   image: z.string().url("Invalid image URL").or(z.string().min(1)),
-  category: z.enum(["hoodie", "tshirt", "other"]),
+  category: z.enum(["kurta", "shirt", "pant", "dupatta", "saree", "other"]),
   sizes: z.array(z.string()).min(1, "At least one size is required"),
 }).omit({
   id: true,

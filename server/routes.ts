@@ -1,14 +1,15 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { body, validationResult } from "express-validator";
 import { 
-  insertUserSchema, 
-  loginSchema, 
-  insertProductSchema, 
+  requestOtpSchema,
+  verifyOtpSchema,
+  updateProfileSchema,
+  insertProductSchema,
   insertOrderSchema,
+  insertAddressSchema,
   type User 
 } from "@shared/schema";
 
@@ -36,7 +37,7 @@ function authenticateToken(req: any, res: any, next: any) {
   }
 
   try {
-    const user = jwt.verify(token, JWT_SECRET) as User;
+    const user = jwt.verify(token, JWT_SECRET) as any;
     req.user = user;
     next();
   } catch (error) {
@@ -52,88 +53,102 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
+// Generate a 6-digit OTP
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send OTP via console (replace with Twilio in production)
+function sendOtp(phone: string, otp: string): void {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`📱 OTP for ${phone}: ${otp}`);
+  console.log(`⏰ Valid for 10 minutes`);
+  console.log(`${'='.repeat(60)}\n`);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // ==================== AUTH ROUTES ====================
   
-  // Register new user
-  app.post("/api/auth/register", 
+  // Request OTP
+  app.post("/api/auth/request-otp", 
     [
-      body("email").isEmail().normalizeEmail().trim().escape(),
-      body("password").isLength({ min: 6 }).trim(),
-      body("name").isLength({ min: 2, max: 100 }).trim().escape(),
-      body("phone").optional().trim().escape(),
+      body("phone").matches(/^\+91[0-9]{10}$/).withMessage("Invalid Indian phone number format"),
       validateRequest
     ],
     async (req: Request, res: Response) => {
     try {
-      const validatedData = insertUserSchema.parse(req.body);
+      const validatedData = requestOtpSchema.parse(req.body);
       
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(validatedData.email);
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already registered" });
+      // Check if user exists, create if not
+      let user = await storage.getUserByPhone(validatedData.phone);
+      if (!user) {
+        user = await storage.createUser(validatedData.phone);
       }
 
-      // Hash password with 12 salt rounds for better security
-      const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+      // Generate and store OTP
+      const otp = generateOtp();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await storage.updateUserOtp(validatedData.phone, otp, expiresAt);
       
-      // Create user
-      const user = await storage.createUser({
-        ...validatedData,
-        password: hashedPassword,
+      // Send OTP (console for now, Twilio later)
+      sendOtp(validatedData.phone, otp);
+
+      res.json({ 
+        message: "OTP sent successfully",
+        phone: validatedData.phone
       });
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { id: user.id, email: user.email, isAdmin: user.isAdmin },
-        JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, token });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Registration failed" });
+      res.status(400).json({ message: error.message || "Failed to send OTP" });
     }
   });
 
-  // Login user
-  app.post("/api/auth/login", 
+  // Verify OTP and login
+  app.post("/api/auth/verify-otp", 
     [
-      body("email").isEmail().normalizeEmail().trim().escape(),
-      body("password").notEmpty().trim(),
+      body("phone").matches(/^\+91[0-9]{10}$/).withMessage("Invalid Indian phone number format"),
+      body("otpCode").isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits"),
       validateRequest
     ],
     async (req: Request, res: Response) => {
     try {
-      const validatedData = loginSchema.parse(req.body);
+      const validatedData = verifyOtpSchema.parse(req.body);
       
-      // Find user
-      const user = await storage.getUserByEmail(validatedData.email);
+      // Verify OTP
+      const user = await storage.verifyAndClearOtp(validatedData.phone, validatedData.otpCode);
       if (!user) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(validatedData.password, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        return res.status(401).json({ message: "Invalid or expired OTP" });
       }
 
       // Generate JWT token
       const token = jwt.sign(
-        { id: user.id, email: user.email, isAdmin: user.isAdmin },
+        { id: user.id, phone: user.phone, isAdmin: user.isAdmin },
         JWT_SECRET,
-        { expiresIn: "7d" }
+        { expiresIn: "30d" }
       );
 
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, token });
+      // Return user and token
+      const { otpCode, otpExpiresAt, otpAttempts, ...userWithoutOtp } = user;
+      res.json({ user: userWithoutOtp, token });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Login failed" });
+      res.status(400).json({ message: error.message || "OTP verification failed" });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/auth/profile", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = updateProfileSchema.parse(req.body);
+      const user = await storage.updateUserProfile(req.user.id, validatedData);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { otpCode, otpExpiresAt, otpAttempts, ...userWithoutOtp } = user;
+      res.json(userWithoutOtp);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to update profile" });
     }
   });
 
@@ -144,8 +159,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      const { otpCode, otpExpiresAt, otpAttempts, ...userWithoutOtp } = user;
+      res.json(userWithoutOtp);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== ADDRESS ROUTES ====================
+  
+  // Get user's addresses
+  app.get("/api/addresses", authenticateToken, async (req: any, res) => {
+    try {
+      const addresses = await storage.getUserAddresses(req.user.id);
+      res.json(addresses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create address
+  app.post("/api/addresses", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = insertAddressSchema.parse(req.body);
+      const address = await storage.createAddress(req.user.id, validatedData);
+      res.status(201).json(address);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to create address" });
+    }
+  });
+
+  // Update address
+  app.patch("/api/addresses/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = insertAddressSchema.partial().parse(req.body);
+      const address = await storage.updateAddress(req.params.id, validatedData);
+      if (!address) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      res.json(address);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to update address" });
+    }
+  });
+
+  // Delete address
+  app.delete("/api/addresses/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const success = await storage.deleteAddress(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Set default address
+  app.post("/api/addresses/:id/set-default", authenticateToken, async (req: any, res) => {
+    try {
+      await storage.setDefaultAddress(req.user.id, req.params.id);
+      res.json({ message: "Default address updated" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -227,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all orders (admin only)
-  app.get("/api/orders/all", authenticateToken, requireAdmin, async (req: any, res) => {
+  app.get("/api/admin/orders", authenticateToken, requireAdmin, async (req: any, res) => {
     try {
       const orders = await storage.getAllOrders();
       res.json(orders);
@@ -243,15 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: req.user.id,
       });
-      
-      const order = await storage.createOrder({
-        ...validatedData,
-        userId: req.user.id,
-      });
-      
-      // TODO: Integrate Stripe/Razorpay payment processing here
-      // For now, orders are created with "pending" payment status
-      
+      const order = await storage.createOrder(validatedData);
       res.status(201).json(order);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Failed to create order" });
@@ -259,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update order status (admin only)
-  app.patch("/api/orders/:id", authenticateToken, requireAdmin, async (req: any, res) => {
+  app.patch("/api/admin/orders/:id/status", authenticateToken, requireAdmin, async (req: any, res) => {
     try {
       const { status } = req.body;
       if (!status) {
@@ -272,30 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(order);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ==================== STRIPE PAYMENT PLACEHOLDER ====================
-  
-  // TODO: Integrate Stripe payment processing
-  // Placeholder for future Stripe integration
-  app.post("/api/create-payment-intent", authenticateToken, async (req: any, res) => {
-    try {
-      // TODO: Implement Stripe payment intent creation
-      // const { amount } = req.body;
-      // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      // const paymentIntent = await stripe.paymentIntents.create({
-      //   amount: Math.round(amount * 100),
-      //   currency: "usd",
-      // });
-      // res.json({ clientSecret: paymentIntent.client_secret });
-      
-      res.status(501).json({ 
-        message: "Payment integration not yet implemented. Please add Stripe/Razorpay API keys." 
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      res.status(400).json({ message: error.message || "Failed to update order status" });
     }
   });
 
