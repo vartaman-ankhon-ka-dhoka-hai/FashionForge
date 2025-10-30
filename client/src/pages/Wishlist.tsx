@@ -86,7 +86,7 @@ export default function Wishlist() {
                   </h3>
                 </Link>
                 <p className="text-lg font-bold text-primary">
-                  ${item.price.toFixed(2)}
+                  ₹{item.price.toFixed(2)}
                 </p>
                 <div className="flex gap-2">
                   <Button

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Instagram, Twitter, Facebook } from "lucide-react";
+import { Instagram, Twitter, Facebook, MessageCircle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -10,19 +10,23 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold">URBAN THREAD</h3>
+            <h3 className="text-lg font-bold">Made in Pune</h3>
             <p className="text-sm text-muted-foreground">
-              Premium streetwear designed for the modern urban lifestyle. Quality craftsmanship meets minimalist design.
+              Take pride in your roots. Authentic Indian apparel celebrating local craftsmanship and cultural heritage.
             </p>
             <div className="flex gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild data-testid="button-whatsapp">
+                <a href="https://wa.me/919370117807" target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild data-testid="button-email">
+                <a href="mailto:made.in.pune.official11@gmail.com">
+                  <Mail className="h-4 w-4" />
+                </a>
+              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-instagram">
                 <Instagram className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-twitter">
-                <Twitter className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-facebook">
-                <Facebook className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -99,7 +103,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} URBAN THREAD. All rights reserved.
+            © {new Date().getFullYear()} Made in Pune. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link href="/privacy">

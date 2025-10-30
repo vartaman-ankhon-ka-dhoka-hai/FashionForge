@@ -1,18 +1,31 @@
 import { 
   type User, 
-  type InsertUser,
   type Product,
   type InsertProduct,
   type Order,
   type InsertOrder,
+  type Address,
+  type InsertAddress,
+  type UpdateProfile,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
+  createUser(phone: string): Promise<User>;
+  updateUserProfile(id: string, profile: UpdateProfile): Promise<User | undefined>;
+  updateUserOtp(phone: string, otpCode: string, expiresAt: Date): Promise<void>;
+  verifyAndClearOtp(phone: string, otpCode: string): Promise<User | null>;
+  
+  // Address methods
+  getUserAddresses(userId: string): Promise<Address[]>;
+  getAddress(id: string): Promise<Address | undefined>;
+  createAddress(userId: string, address: InsertAddress): Promise<Address>;
+  updateAddress(id: string, address: Partial<InsertAddress>): Promise<Address | undefined>;
+  deleteAddress(id: string): Promise<boolean>;
+  setDefaultAddress(userId: string, addressId: string): Promise<void>;
   
   // Product methods
   getAllProducts(): Promise<Product[]>;

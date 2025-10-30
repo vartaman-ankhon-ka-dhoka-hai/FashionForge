@@ -57,7 +57,7 @@ export default function Login() {
     onSuccess: (data) => {
       setUser(data.user);
       localStorage.setItem("token", data.token);
-      toast({ title: "Account created!", description: "Welcome to URBAN THREAD" });
+      toast({ title: "Account created!", description: "Welcome to Made in Pune" });
       setLocation("/");
     },
     onError: (error: any) => {
@@ -73,7 +73,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome to URBAN THREAD</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Made in Pune</CardTitle>
           <CardDescription>Sign in to your account or create a new one</CardDescription>
         </CardHeader>
         <CardContent>

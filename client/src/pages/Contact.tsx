@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, MessageCircle, MapPin } from "lucide-react";
 
 export default function Contact() {
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,7 +54,9 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Email</h3>
-                  <p className="text-muted-foreground">support@urbanthread.com</p>
+                  <a href="mailto:made.in.pune.official11@gmail.com" className="text-muted-foreground hover:text-primary">
+                    made.in.pune.official11@gmail.com
+                  </a>
                   <p className="text-sm text-muted-foreground mt-1">
                     We'll respond within 24 hours
                   </p>
@@ -65,13 +67,15 @@ export default function Contact() {
             <Card className="p-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-primary/10 rounded-md">
-                  <Phone className="h-6 w-6 text-primary" />
+                  <MessageCircle className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-1">Phone</h3>
-                  <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                  <h3 className="font-semibold mb-1">WhatsApp</h3>
+                  <a href="https://wa.me/919370117807" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                    +91 93701 17807
+                  </a>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Mon-Fri, 9am-6pm EST
+                    Available daily, 10am-8pm IST
                   </p>
                 </div>
               </div>
@@ -83,11 +87,10 @@ export default function Contact() {
                   <MapPin className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-1">Address</h3>
+                  <h3 className="font-semibold mb-1">Location</h3>
                   <p className="text-muted-foreground">
-                    123 Fashion Street<br />
-                    New York, NY 10001<br />
-                    United States
+                    Pune, Maharashtra<br />
+                    India
                   </p>
                 </div>
               </div>

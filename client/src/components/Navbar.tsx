@@ -6,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useCartStore } from "@/lib/cart-store";
 import { useWishlistStore } from "@/lib/wishlist-store";
-import logoImage from "@assets/generated_images/Clothing_brand_logo_icon_02f84793.png";
-
 export function Navbar() {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -30,8 +28,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-2 py-1 cursor-pointer" data-testid="link-home">
-              <img src={logoImage} alt="URBAN THREAD" className="h-8 w-8" />
-              <span className="text-lg font-bold tracking-tight">URBAN THREAD</span>
+              <img src="/logo.png" alt="Made in Pune" className="h-10 w-auto" />
             </div>
           </Link>
 

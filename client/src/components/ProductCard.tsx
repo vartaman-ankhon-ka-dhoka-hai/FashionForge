@@ -92,7 +92,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
             <div className="flex items-center justify-between pt-2">
               <span className="text-xl font-bold text-primary" data-testid={`text-price-${product.id}`}>
-                ${parseFloat(product.price).toFixed(2)}
+                ₹{parseFloat(product.price).toFixed(2)}
               </span>
               {product.inStock && (
                 <Badge variant="outline" className="text-xs text-green-500 border-green-500">

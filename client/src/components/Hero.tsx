@@ -19,11 +19,11 @@ export function Hero() {
       {/* Hero Content */}
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6">
-          Premium Streetwear
-          <span className="block mt-2 text-primary">Redefined</span>
+          Take Pride
+          <span className="block mt-2 text-primary">In Your Roots</span>
         </h1>
         <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mx-auto mb-8">
-          Discover our collection of minimalist, high-quality clothing designed for the modern urban lifestyle
+          Authentic Indian apparel celebrating Pune's rich cultural heritage and craftsmanship
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button

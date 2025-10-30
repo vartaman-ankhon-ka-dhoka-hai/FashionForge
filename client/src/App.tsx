@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth-context";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { LogoAnimation } from "@/components/LogoAnimation";
 
 import Home from "@/pages/Home";
 import Products from "@/pages/Products";
@@ -48,6 +49,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
+          <LogoAnimation />
           <Toaster />
           <Router />
         </TooltipProvider>

@@ -183,14 +183,14 @@ export default function Checkout() {
                       {item.name} ({item.size}) x{item.quantity}
                     </span>
                     <span className="font-medium">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      ₹{(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
                 <div className="border-t pt-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">${getTotalPrice().toFixed(2)}</span>
+                    <span className="font-medium">₹{getTotalPrice().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
@@ -199,7 +199,7 @@ export default function Checkout() {
                   <div className="border-t pt-2 flex justify-between">
                     <span className="font-semibold">Total</span>
                     <span className="font-bold text-xl text-primary" data-testid="text-order-total">
-                      ${getTotalPrice().toFixed(2)}
+                      ₹{getTotalPrice().toFixed(2)}
                     </span>
                   </div>
                 </div>

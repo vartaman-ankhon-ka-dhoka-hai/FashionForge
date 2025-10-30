@@ -3,14 +3,30 @@ import { pgTable, text, varchar, decimal, integer, boolean, timestamp } from "dr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table for authentication
+// Users table for authentication (phone-based)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  name: text("name").notNull(),
-  phone: text("phone"),
+  phone: text("phone").notNull().unique(),
+  name: text("name"),
+  email: text("email"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  otpCode: text("otp_code"),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpAttempts: integer("otp_attempts").default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Addresses table for multi-address management
+export const addresses = pgTable("addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  label: text("label").notNull(), // "Home", "Work", etc.
+  addressLine1: text("address_line1").notNull(),
+  addressLine2: text("address_line2"),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  pincode: text("pincode").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -34,27 +50,38 @@ export const orders = pgTable("orders", {
   userId: varchar("user_id").notNull().references(() => users.id),
   items: text("items").notNull(), // JSON stringified array of cart items
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"), // pending, paid, shipped, delivered
-  shippingAddress: text("shipping_address").notNull(),
+  status: text("status").notNull().default("pending"), // pending, confirmed, packed, shipped, delivered, cancelled
+  addressId: varchar("address_id").references(() => addresses.id),
+  shippingAddress: text("shipping_address").notNull(), // Denormalized for history
   paymentStatus: text("payment_status").notNull().default("pending"), // pending, completed, failed
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Insert schemas with validation
-export const insertUserSchema = createInsertSchema(users, {
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().optional(),
-}).omit({
-  id: true,
-  createdAt: true,
-  isAdmin: true,
+export const requestOtpSchema = z.object({
+  phone: z.string().regex(/^\+91\d{10}$/, "Phone must be in format +91XXXXXXXXXX"),
 });
 
-export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+export const verifyOtpSchema = z.object({
+  phone: z.string().regex(/^\+91\d{10}$/, "Phone must be in format +91XXXXXXXXXX"),
+  otpCode: z.string().length(6, "OTP must be 6 digits"),
+});
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address").optional(),
+});
+
+export const insertAddressSchema = createInsertSchema(addresses, {
+  label: z.string().min(1, "Label is required"),
+  addressLine1: z.string().min(5, "Address is required"),
+  city: z.string().min(2, "City is required"),
+  state: z.string().min(2, "State is required"),
+  pincode: z.string().regex(/^\d{6}$/, "Pincode must be 6 digits"),
+}).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
 });
 
 export const insertProductSchema = createInsertSchema(products, {
@@ -82,8 +109,12 @@ export const insertOrderSchema = createInsertSchema(orders, {
 
 // TypeScript types
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type LoginCredentials = z.infer<typeof loginSchema>;
+export type RequestOtp = z.infer<typeof requestOtpSchema>;
+export type VerifyOtp = z.infer<typeof verifyOtpSchema>;
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
+
+export type Address = typeof addresses.$inferSelect;
+export type InsertAddress = z.infer<typeof insertAddressSchema>;
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
